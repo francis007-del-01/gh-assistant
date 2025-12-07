@@ -87,113 +87,135 @@ func runPush(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to check staged changes: %w", err)
 	}
 
-	var diff string
-	var changedFiles []string
-	var needsCommit bool
+	// Check for existing unpushed commits
+	unpushedMessages, _ := g.GetUnpushedCommitMessages()
+	hasUnpushed := len(unpushedMessages) > 0
+
+	var message string
+
+	// Show existing unpushed commits if any (regardless of staged changes)
+	if hasUnpushed {
+		fmt.Printf("📦 Found %d existing unpushed commit(s):\n", len(unpushedMessages))
+		for _, msg := range unpushedMessages {
+			fmt.Printf("   • %s\n", msg)
+		}
+		fmt.Println()
+	}
 
 	if hasStaged {
-		// We have staged changes that need to be committed
-		diff, err = g.GetStagedDiff()
+		// CASE 1: Staged changes - generate AI commit message
+		fmt.Println("📝 Found staged changes to commit")
+
+		diff, err := g.GetStagedDiff()
 		if err != nil {
 			return fmt.Errorf("failed to get staged diff: %w", err)
 		}
-		needsCommit = true
-		fmt.Println("📝 Found staged changes to commit")
-	} else {
-		// Check for unpushed commits
-		diff, err = g.GetUnpushedDiff()
+
+		changedFiles, _ := g.GetChangedFiles()
+
+		// Initialize AI client
+		aiClient := ai.New(ai.Config{
+			Provider: provider,
+			APIKey:   apiKey,
+			Model:    viper.GetString("model"),
+		})
+
+		fmt.Println("🤖 Generating commit message...")
+
+		// Generate commit message
+		message, err = aiClient.GenerateCommitMessage(diff, changedFiles)
 		if err != nil {
-			// Might be first push
-			diff, err = g.GetAllDiff()
-			if err != nil {
-				return fmt.Errorf("failed to get diff: %w", err)
+			return fmt.Errorf("failed to generate commit message: %w", err)
+		}
+
+		// Display the generated message
+		fmt.Println()
+		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		fmt.Println("📋 Generated commit message:")
+		fmt.Println()
+		fmt.Printf("   %s\n", message)
+		fmt.Println()
+		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		fmt.Println()
+
+		// Confirm with user
+		if !autoConfirm {
+			fmt.Print("Proceed with this message? [Y/n/e(dit)]: ")
+			reader := bufio.NewReader(os.Stdin)
+			input, _ := reader.ReadString('\n')
+			input = strings.TrimSpace(strings.ToLower(input))
+
+			switch input {
+			case "n", "no":
+				fmt.Println("❌ Aborted")
+				return nil
+			case "e", "edit":
+				fmt.Println("Enter your commit message (press Enter twice to finish):")
+				var lines []string
+				for {
+					line, _ := reader.ReadString('\n')
+					line = strings.TrimRight(line, "\n\r")
+					if line == "" && len(lines) > 0 {
+						break
+					}
+					if line != "" {
+						lines = append(lines, line)
+					}
+				}
+				if len(lines) > 0 {
+					message = strings.Join(lines, "\n")
+				}
+			case "", "y", "yes":
+				// Continue with the message
+			default:
+				fmt.Println("❌ Invalid input, aborted")
+				return nil
 			}
 		}
 
-		if diff == "" {
-			// Check if there are unstaged changes
+		// Create the commit
+		fmt.Println("💾 Creating commit...")
+		if err := g.Commit(message); err != nil {
+			return fmt.Errorf("failed to commit: %w", err)
+		}
+		fmt.Printf("✅ Committed: %s\n", message)
+
+	} else {
+		// CASE 2: No staged changes - just push existing commits
+		if !hasUnpushed {
+			// No unpushed commits either - check for unstaged changes
 			hasUnstaged, _ := g.HasUnstagedChanges()
 			if hasUnstaged {
 				return fmt.Errorf("you have unstaged changes. Use -a flag to stage all, or stage manually with 'git add'")
 			}
 			return fmt.Errorf("no changes to commit or push")
 		}
-		fmt.Println("📝 Found unpushed commits")
-	}
 
-	changedFiles, _ = g.GetChangedFiles()
+		// Confirm push (commits already shown above)
+		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		fmt.Println("📋 No new changes to commit. Ready to push existing commits.")
+		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		fmt.Println()
 
-	if diff == "" {
-		return fmt.Errorf("no changes detected")
-	}
+		if !autoConfirm {
+			fmt.Print("Push these commits? [Y/n]: ")
+			reader := bufio.NewReader(os.Stdin)
+			input, _ := reader.ReadString('\n')
+			input = strings.TrimSpace(strings.ToLower(input))
 
-	// Initialize AI client
-	aiClient := ai.New(ai.Config{
-		Provider: provider,
-		APIKey:   apiKey,
-		Model:    viper.GetString("model"),
-	})
-
-	fmt.Println("🤖 Generating commit message...")
-
-	// Generate commit message
-	message, err := aiClient.GenerateCommitMessage(diff, changedFiles)
-	if err != nil {
-		return fmt.Errorf("failed to generate commit message: %w", err)
-	}
-
-	// Display the generated message
-	fmt.Println()
-	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println("📋 Generated commit message:")
-	fmt.Println()
-	fmt.Printf("   %s\n", message)
-	fmt.Println()
-	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println()
-
-	// Confirm with user
-	if !autoConfirm {
-		fmt.Print("Proceed with this message? [Y/n/e(dit)]: ")
-		reader := bufio.NewReader(os.Stdin)
-		input, _ := reader.ReadString('\n')
-		input = strings.TrimSpace(strings.ToLower(input))
-
-		switch input {
-		case "n", "no":
-			fmt.Println("❌ Aborted")
-			return nil
-		case "e", "edit":
-			fmt.Println("Enter your commit message (press Enter twice to finish):")
-			var lines []string
-			for {
-				line, _ := reader.ReadString('\n')
-				line = strings.TrimRight(line, "\n\r")
-				if line == "" && len(lines) > 0 {
-					break
-				}
-				if line != "" {
-					lines = append(lines, line)
-				}
+			if input == "n" || input == "no" {
+				fmt.Println("❌ Aborted")
+				return nil
 			}
-			if len(lines) > 0 {
-				message = strings.Join(lines, "\n")
-			}
-		case "", "y", "yes":
-			// Continue with the message
-		default:
-			fmt.Println("❌ Invalid input, aborted")
-			return nil
 		}
-	}
 
-	// Commit if we have staged changes
-	if needsCommit {
-		fmt.Println("💾 Creating commit...")
-		if err := g.Commit(message); err != nil {
-			return fmt.Errorf("failed to commit: %w", err)
+		// Use last commit message for Jira (if applicable)
+		if hasUnpushed {
+			parts := strings.SplitN(unpushedMessages[0], " - ", 2)
+			if len(parts) == 2 {
+				message = parts[1]
+			}
 		}
-		fmt.Printf("✅ Committed: %s\n", message)
 	}
 
 	// Check if this is a first push to a new branch (for Jira creation)

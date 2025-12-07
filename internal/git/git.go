@@ -85,6 +85,34 @@ func (g *Git) GetUnpushedCommits() ([]string, error) {
 	return strings.Split(output, "\n"), nil
 }
 
+// GetUnpushedCommitMessages returns commit messages for unpushed commits
+// Format: ["hash:message", "hash:message", ...]
+func (g *Git) GetUnpushedCommitMessages() ([]string, error) {
+	branch, err := g.GetCurrentBranch()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the upstream branch
+	upstream, err := g.run("rev-parse", "--abbrev-ref", branch+"@{upstream}")
+	if err != nil {
+		// No upstream set, return empty
+		return nil, nil
+	}
+
+	// Get unpushed commits with short hash and subject
+	output, err := g.run("log", upstream+"..HEAD", "--format=%h - %s")
+	if err != nil {
+		return nil, err
+	}
+
+	if output == "" {
+		return nil, nil
+	}
+
+	return strings.Split(output, "\n"), nil
+}
+
 // GetCommitDiff returns the diff for a specific commit
 func (g *Git) GetCommitDiff(commitHash string) (string, error) {
 	return g.run("show", commitHash, "--format=", "--no-color")
