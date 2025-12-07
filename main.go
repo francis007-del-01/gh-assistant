@@ -5,6 +5,7 @@ import (
 )
 
 func main() {
+	// Entry point for the application
 	cmd.Execute()
 }
 
