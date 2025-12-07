@@ -5,7 +5,7 @@ An AI-powered CLI tool that generates meaningful commit messages from your git d
 ## Flow
 
 ```
-You → pushx → AI analyzes diff → Generates commit message → You confirm → Commits & Pushes → Remote
+You → push → AI analyzes diff → Generates commit message → You confirm → Commits & Pushes → Remote
                                                                               ↓
                                                           (First push to new branch?)
                                                                               ↓
@@ -78,25 +78,25 @@ vim app.go
 git add .
 
 # Let AI generate commit message and push
-gh-assistant pushx
+gh-assistant push
 ```
 
 ### Commands
 
 ```bash
 # Stage all changes, generate AI commit message, and push
-gh-assistant pushx -a
+gh-assistant push -a
 
 # Auto-confirm without prompt
-gh-assistant pushx -y
+gh-assistant push -y
 
 # Combine flags
-gh-assistant pushx -ay
+gh-assistant push -ay
 ```
 
 ### Interactive Mode
 
-When you run `pushx`, you'll see:
+When you run `push`, you'll see:
 
 ```
 🔍 Analyzing your changes...
@@ -171,21 +171,21 @@ Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore
 
 ```bash
 # After adding a new feature
-$ gh-assistant pushx
+$ gh-assistant push
 🤖 Generated: feat(auth): implement JWT token refresh mechanism
 
 # After fixing a bug
-$ gh-assistant pushx  
+$ gh-assistant push  
 🤖 Generated: fix(api): handle null pointer in user service
 
 # After updating docs
-$ gh-assistant pushx
+$ gh-assistant push
 🤖 Generated: docs(readme): add installation instructions
 
 # Start a new feature branch with auto Jira creation
 $ git checkout -b feature/user-auth
 $ vim auth.go
-$ gh-assistant pushx -a
+$ gh-assistant push -a
 🤖 Generated: feat(auth): add OAuth2 login flow
 🎫 Created: PROJ-456 - feat(auth): add OAuth2 login flow
 ```

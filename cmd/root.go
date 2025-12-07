@@ -17,7 +17,7 @@ var rootCmd = &cobra.Command{
 and generates meaningful commit messages using AI before pushing.
 
 Usage:
-  gh-assistant pushx    # Analyze diff, generate message, commit & push
+  gh-assistant push    # Analyze diff, generate message, commit & push
   gh-assistant config   # Configure API keys and settings`,
 }
 

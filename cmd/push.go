@@ -18,26 +18,26 @@ var (
 	stageAll    bool
 )
 
-var pushxCmd = &cobra.Command{
-	Use:   "pushx",
+var pushCmd = &cobra.Command{
+	Use:   "push",
 	Short: "Generate AI commit message and push",
 	Long: `Analyzes your git diff, generates a meaningful commit message using AI,
 and pushes to the remote repository.
 
 Examples:
-  gh-assistant pushx           # Commit staged changes with AI message and push
-  gh-assistant pushx -a        # Stage all changes, commit with AI message and push
-  gh-assistant pushx -y        # Skip confirmation prompt`,
-	RunE: runPushx,
+  gh-assistant push           # Commit staged changes with AI message and push
+  gh-assistant push -a        # Stage all changes, commit with AI message and push
+  gh-assistant push -y        # Skip confirmation prompt`,
+	RunE: runPush,
 }
 
 func init() {
-	rootCmd.AddCommand(pushxCmd)
-	pushxCmd.Flags().BoolVarP(&autoConfirm, "yes", "y", false, "Auto-confirm the generated commit message")
-	pushxCmd.Flags().BoolVarP(&stageAll, "all", "a", false, "Stage all changes before committing")
+	rootCmd.AddCommand(pushCmd)
+	pushCmd.Flags().BoolVarP(&autoConfirm, "yes", "y", false, "Auto-confirm the generated commit message")
+	pushCmd.Flags().BoolVarP(&stageAll, "all", "a", false, "Stage all changes before committing")
 }
 
-func runPushx(cmd *cobra.Command, args []string) error {
+func runPush(cmd *cobra.Command, args []string) error {
 	// Check configuration
 	apiKey := viper.GetString("api_key")
 	if apiKey == "" {
