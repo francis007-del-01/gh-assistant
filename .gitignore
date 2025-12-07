@@ -1,0 +1,17 @@
+# Binary
+gh-assistant
+gh-assistant.exe
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config with secrets
+.gh-assistant.yaml
+
