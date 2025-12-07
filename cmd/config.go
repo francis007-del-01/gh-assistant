@@ -15,6 +15,11 @@ var (
 	apiKey      string
 	providerArg string
 	modelArg    string
+	// Jira config flags
+	jiraURL     string
+	jiraEmail   string
+	jiraToken   string
+	jiraProject string
 )
 
 var configCmd = &cobra.Command{
@@ -38,6 +43,11 @@ func init() {
 	configCmd.Flags().StringVar(&providerArg, "provider", "", "Set the AI provider (openai, anthropic)")
 	configCmd.Flags().StringVar(&modelArg, "model", "", "Set the model to use")
 	configCmd.Flags().BoolVar(&showConfig, "show", false, "Show current configuration")
+	// Jira configuration flags
+	configCmd.Flags().StringVar(&jiraURL, "jira-url", "", "Set Jira base URL (e.g., https://yourcompany.atlassian.net)")
+	configCmd.Flags().StringVar(&jiraEmail, "jira-email", "", "Set Jira account email")
+	configCmd.Flags().StringVar(&jiraToken, "jira-token", "", "Set Jira API token")
+	configCmd.Flags().StringVar(&jiraProject, "jira-project", "", "Set Jira project key (e.g., PROJ)")
 }
 
 func runConfig(cmd *cobra.Command, args []string) error {
@@ -82,6 +92,31 @@ func runConfig(cmd *cobra.Command, args []string) error {
 		config["model"] = modelArg
 		updated = true
 		fmt.Printf("✅ Model set to: %s\n", modelArg)
+	}
+
+	// Jira configuration
+	if jiraURL != "" {
+		config["jira_url"] = jiraURL
+		updated = true
+		fmt.Printf("✅ Jira URL set to: %s\n", jiraURL)
+	}
+
+	if jiraEmail != "" {
+		config["jira_email"] = jiraEmail
+		updated = true
+		fmt.Printf("✅ Jira email set to: %s\n", jiraEmail)
+	}
+
+	if jiraToken != "" {
+		config["jira_token"] = jiraToken
+		updated = true
+		fmt.Println("✅ Jira API token configured")
+	}
+
+	if jiraProject != "" {
+		config["jira_project"] = jiraProject
+		updated = true
+		fmt.Printf("✅ Jira project set to: %s\n", jiraProject)
 	}
 
 	if !updated {
@@ -158,6 +193,46 @@ func showCurrentConfig() error {
 		model = "default"
 	}
 	fmt.Printf("📦 Model: %s\n", model)
+
+	fmt.Println()
+	fmt.Println("Jira Integration:")
+
+	// Jira URL
+	jURL := viper.GetString("jira_url")
+	if jURL != "" {
+		fmt.Printf("🔗 Jira URL: %s\n", jURL)
+	} else {
+		fmt.Println("🔗 Jira URL: not set")
+	}
+
+	// Jira Email
+	jEmail := viper.GetString("jira_email")
+	if jEmail != "" {
+		fmt.Printf("📧 Jira Email: %s\n", jEmail)
+	} else {
+		fmt.Println("📧 Jira Email: not set")
+	}
+
+	// Jira Token
+	jToken := viper.GetString("jira_token")
+	if jToken != "" {
+		if len(jToken) > 8 {
+			jToken = jToken[:4] + "..." + jToken[len(jToken)-4:]
+		} else {
+			jToken = "****"
+		}
+		fmt.Printf("🔑 Jira Token: %s\n", jToken)
+	} else {
+		fmt.Println("🔑 Jira Token: not set")
+	}
+
+	// Jira Project
+	jProject := viper.GetString("jira_project")
+	if jProject != "" {
+		fmt.Printf("📋 Jira Project: %s\n", jProject)
+	} else {
+		fmt.Println("📋 Jira Project: not set")
+	}
 
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 

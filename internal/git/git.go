@@ -229,3 +229,30 @@ func (g *Git) GetChangedFiles() ([]string, error) {
 	return strings.Split(output, "\n"), nil
 }
 
+// IsFirstPushToBranch checks if the current branch has no upstream tracking branch
+// This indicates it's a new branch that hasn't been pushed yet
+func (g *Git) IsFirstPushToBranch() (bool, error) {
+	branch, err := g.GetCurrentBranch()
+	if err != nil {
+		return false, err
+	}
+
+	// Try to get the upstream branch
+	_, err = g.run("rev-parse", "--abbrev-ref", branch+"@{upstream}")
+	if err != nil {
+		// No upstream means this is a first push
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// IsMainBranch checks if the current branch is main or master
+func (g *Git) IsMainBranch() bool {
+	branch, err := g.GetCurrentBranch()
+	if err != nil {
+		return false
+	}
+	return branch == "main" || branch == "master"
+}
+

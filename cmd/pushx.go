@@ -8,6 +8,7 @@ import (
 
 	"github.com/namin2/gh-assistant/internal/ai"
 	"github.com/namin2/gh-assistant/internal/git"
+	"github.com/namin2/gh-assistant/internal/jira"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -195,6 +196,10 @@ func runPushx(cmd *cobra.Command, args []string) error {
 		fmt.Printf("✅ Committed: %s\n", message)
 	}
 
+	// Check if this is a first push to a new branch (for Jira creation)
+	isFirstPush, _ := g.IsFirstPushToBranch()
+	isMainBranch := g.IsMainBranch()
+
 	// Push
 	fmt.Println("🚀 Pushing to remote...")
 	err = g.Push()
@@ -207,6 +212,33 @@ func runPushx(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Println("✅ Successfully pushed!")
+
+	// Create Jira ticket on first push to a new branch (not main/master)
+	if isFirstPush && !isMainBranch {
+		jiraClient := jira.New(jira.Config{
+			BaseURL:  viper.GetString("jira_url"),
+			Email:    viper.GetString("jira_email"),
+			APIToken: viper.GetString("jira_token"),
+			Project:  viper.GetString("jira_project"),
+		})
+
+		if jiraClient.IsConfigured() {
+			fmt.Println()
+			fmt.Println("🎫 Creating Jira ticket...")
+
+			title, err := jiraClient.CreateIssueWithTitle(message)
+			if err != nil {
+				fmt.Printf("⚠️  Warning: Failed to create Jira ticket: %v\n", err)
+			} else {
+				// Extract issue key from title (format: "KEY-123 - message")
+				parts := strings.SplitN(title, " - ", 2)
+				issueKey := parts[0]
+				fmt.Printf("✅ Jira ticket created: %s\n", title)
+				fmt.Printf("🔗 %s\n", jiraClient.GetIssueURL(issueKey))
+			}
+		}
+	}
+
 	return nil
 }
 

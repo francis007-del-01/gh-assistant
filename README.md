@@ -1,11 +1,15 @@
 # gh-assistant 🤖
 
-An AI-powered CLI tool that generates meaningful commit messages from your git diffs and pushes to remote.
+An AI-powered CLI tool that generates meaningful commit messages from your git diffs, pushes to remote, and automatically creates Jira tickets for new branches.
 
 ## Flow
 
 ```
 You → pushx → AI analyzes diff → Generates commit message → You confirm → Commits & Pushes → Remote
+                                                                              ↓
+                                                          (First push to new branch?)
+                                                                              ↓
+                                                              Creates Jira ticket (In Progress)
 ```
 
 ## Installation
@@ -47,6 +51,20 @@ gh-assistant config --model gpt-4o
 # Show current config
 gh-assistant config --show
 ```
+
+### Jira Integration (Optional)
+
+To enable automatic Jira ticket creation on first push to a new branch:
+
+```bash
+gh-assistant config \
+  --jira-url https://yourcompany.atlassian.net \
+  --jira-email your.email@company.com \
+  --jira-token your-api-token \
+  --jira-project PROJ
+```
+
+To generate a Jira API token, visit: https://id.atlassian.com/manage-profile/security/api-tokens
 
 ## Usage
 
@@ -100,6 +118,38 @@ Options:
 - `n` - Cancel
 - `e` - Edit the message manually
 
+### Jira Integration
+
+When you push to a **new branch** for the first time (with Jira configured), a ticket is automatically created:
+
+```
+🔍 Analyzing your changes...
+📝 Found staged changes to commit
+🤖 Generating commit message...
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 Generated commit message:
+
+   feat(auth): implement JWT token refresh mechanism
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Proceed with this message? [Y/n/e(dit)]: y
+💾 Creating commit...
+✅ Committed: feat(auth): implement JWT token refresh mechanism
+🚀 Pushing to remote...
+✅ Successfully pushed!
+
+🎫 Creating Jira ticket...
+✅ Jira ticket created: PROJ-123 - feat(auth): implement JWT token refresh mechanism
+🔗 https://yourcompany.atlassian.net/browse/PROJ-123
+```
+
+The Jira ticket is:
+- Created with the AI-generated commit message as the title
+- Automatically transitioned to **In Progress** status
+- Only created on first push to feature branches (not main/master)
+
 ## Supported AI Providers
 
 | Provider | Models | Default |
@@ -131,6 +181,13 @@ $ gh-assistant pushx
 # After updating docs
 $ gh-assistant pushx
 🤖 Generated: docs(readme): add installation instructions
+
+# Start a new feature branch with auto Jira creation
+$ git checkout -b feature/user-auth
+$ vim auth.go
+$ gh-assistant pushx -a
+🤖 Generated: feat(auth): add OAuth2 login flow
+🎫 Created: PROJ-456 - feat(auth): add OAuth2 login flow
 ```
 
 ## License
